@@ -1,4 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../main.dart';
 import './Signup.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -11,15 +13,47 @@ class _LoginScreenState extends State<LoginScreen> {
   String _email = '';
   String _password = '';
   bool _isErrorVisible = false;
+  String _errorMessage = '';
 
-  void _onSubmit() {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  // Function to log in the user using Firebase Authentication
+  Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      
-      // Simulate a login error (replace with actual logic)
-      setState(() {
-        _isErrorVisible = true;
-      });
+
+      try {
+        // Attempt to log in the user with the provided email and password
+        UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+          email: _email,
+          password: _password,
+        );
+
+        // If login is successful, navigate to the main screen
+        if (userCredential.user != null) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MyApp()),
+          );
+        } else {
+          setState(() {
+            _isErrorVisible = true;
+            _errorMessage = 'Login failed. Please try again.';
+          });
+        }
+      } on FirebaseAuthException catch (e) {
+        // Handle Firebase authentication exceptions
+        setState(() {
+          _isErrorVisible = true;
+          _errorMessage = 'Error: ${e.message}';
+        });
+      } catch (e) {
+        // Handle any other errors that may occur
+        setState(() {
+          _isErrorVisible = true;
+          _errorMessage = 'An unexpected error occurred. Please try again.';
+        });
+      }
     }
   }
 
@@ -36,15 +70,12 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SizedBox(height: 160),
-                // App Logo
                 CircleAvatar(
                   radius: 40,
                   backgroundColor: Colors.deepPurple,
                   child: Icon(Icons.lock_outline, size: 40, color: Colors.white),
                 ),
                 SizedBox(height: 20),
-
-                // Title
                 Text(
                   'Welcome Back!',
                   style: TextStyle(
@@ -55,8 +86,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: 10),
-
-                // Subtitle
                 Text(
                   'Please login to continue',
                   style: TextStyle(fontSize: 16, color: Colors.grey[600]),
@@ -123,10 +152,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       // Login button
                       ElevatedButton(
-                        onPressed: _onSubmit,
+                        onPressed: _login,
                         child: Text(
                           'Login',
-                          style: TextStyle(fontSize: 16, color: Colors.black), 
+                          style: TextStyle(fontSize: 16, color: Colors.black),
                         ),
                         style: ElevatedButton.styleFrom(
                           padding: EdgeInsets.symmetric(vertical: 15, horizontal: 100),
@@ -143,7 +172,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Padding(
                     padding: const EdgeInsets.only(top: 20.0),
                     child: Text(
-                      'Incorrect email or password. Please try again.',
+                      _errorMessage,
                       style: TextStyle(color: Colors.red, fontSize: 14),
                       textAlign: TextAlign.center,
                     ),
@@ -180,5 +209,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-
-

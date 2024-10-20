@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "977158349371",
+    "project_id": "app-development-24dbe",
+    "storage_bucket": "app-development-24dbe.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:977158349371:android:46c3173222d36591ee721e",
+        "android_client_info": {
+          "package_name": "com.example.transportation"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAIYUegdbtlQKsmNYfOIMMUQBrqv9sYQ1U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

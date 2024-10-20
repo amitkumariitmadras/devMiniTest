@@ -1,5 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import './Login.dart';  // Ensure LoginScreen is imported
+import './Login.dart'; // Ensure LoginScreen is correctly imported
 
 class SignupScreen extends StatefulWidget {
   @override
@@ -14,28 +15,59 @@ class _SignupScreenState extends State<SignupScreen> {
   String _confirmPassword = '';
   bool _isErrorVisible = false;
   bool _isSuccessVisible = false;
+  String _errorMessage = '';
 
-  String _checkPasswordStrength(String password) {
-    final strongRegex = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%\^&\*])(?=.{8,})');
-    final mediumRegex = RegExp(r'^(((?=.*[a-z])(?=.*[A-Z]))|((?=.*[a-z])(?=.*\d))|((?=.*[A-Z])(?=.*\d)))(?=.{6,})');
+  bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
 
-    if (strongRegex.hasMatch(password)) {
-      return 'Strong';
-    } else if (mediumRegex.hasMatch(password)) {
-      return 'Medium';
-    } else {
-      return 'Weak';
-    }
-  }
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  void _onSubmit() {
+  Future<void> _onSubmit() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      // Simulate success
-      setState(() {
-        _isErrorVisible = false;
-        _isSuccessVisible = true;
-      });
+
+      // Trim the whitespace from the password fields
+      _password = _password.trim();
+      _confirmPassword = _confirmPassword.trim();
+
+      if (_password != _confirmPassword) {
+        setState(() {
+          _isErrorVisible = true;
+          _isSuccessVisible = false;
+          _errorMessage = 'Passwords do not match';
+        });
+        return;
+      }
+
+      try {
+        // Register the user using Firebase Authentication
+        UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+          email: _email,
+          password: _password,
+        );
+
+        // Show success message
+        setState(() {
+          _isErrorVisible = false;
+          _isSuccessVisible = true;
+        });
+
+        // You can store the user's name, email, or any other info locally if necessary.
+      } on FirebaseAuthException catch (e) {
+        // Handle Firebase authentication exceptions
+        setState(() {
+          _isErrorVisible = true;
+          _isSuccessVisible = false;
+          _errorMessage = 'Failed to register: ${e.message}';
+        });
+      } catch (e) {
+        // General exceptions (e.g., non-Firebase exceptions like network)
+        setState(() {
+          _isErrorVisible = true;
+          _isSuccessVisible = false;
+          _errorMessage = 'Unable to connect to the server. Please try again later.';
+        });
+      }
     }
   }
 
@@ -83,6 +115,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 key: _formKey,
                 child: Column(
                   children: [
+                    // Name field
                     TextFormField(
                       decoration: InputDecoration(
                         labelText: 'Name',
@@ -103,6 +136,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       onSaved: (value) => _name = value!,
                     ),
                     SizedBox(height: 15),
+
+                    // Email field
                     TextFormField(
                       decoration: InputDecoration(
                         labelText: 'Email',
@@ -127,7 +162,10 @@ class _SignupScreenState extends State<SignupScreen> {
                       onSaved: (value) => _email = value!,
                     ),
                     SizedBox(height: 15),
+
+                    // Password field
                     TextFormField(
+                      obscureText: !_isPasswordVisible,
                       decoration: InputDecoration(
                         labelText: 'Password',
                         prefixIcon: Icon(Icons.lock),
@@ -137,21 +175,34 @@ class _SignupScreenState extends State<SignupScreen> {
                           borderRadius: BorderRadius.circular(10),
                           borderSide: BorderSide.none,
                         ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isPasswordVisible = !_isPasswordVisible;
+                            });
+                          },
+                        ),
                       ),
-                      obscureText: true,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Password is required';
                         }
-                        if (value.length < 8) {
-                          return 'Password must be at least 8 characters';
+                        if (value.length < 6) {
+                          return 'Password must be at least 6 characters';
                         }
                         return null;
                       },
                       onSaved: (value) => _password = value!,
                     ),
                     SizedBox(height: 15),
+
+                    // Confirm Password field
                     TextFormField(
+                      obscureText: !_isConfirmPasswordVisible,
                       decoration: InputDecoration(
                         labelText: 'Confirm Password',
                         prefixIcon: Icon(Icons.lock),
@@ -161,17 +212,29 @@ class _SignupScreenState extends State<SignupScreen> {
                           borderRadius: BorderRadius.circular(10),
                           borderSide: BorderSide.none,
                         ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                            });
+                          },
+                        ),
                       ),
-                      obscureText: true,
                       validator: (value) {
-                        if (value != _password) {
-                          return 'Passwords do not match';
+                        if (value == null || value.isEmpty) {
+                          return 'Confirm Password is required';
                         }
                         return null;
                       },
                       onSaved: (value) => _confirmPassword = value!,
                     ),
                     SizedBox(height: 20),
+
+                    // Sign up button
                     ElevatedButton(
                       onPressed: _onSubmit,
                       child: Text('Sign Up', style: TextStyle(fontSize: 16, color: Colors.black)),
@@ -189,10 +252,27 @@ class _SignupScreenState extends State<SignupScreen> {
               if (_isSuccessVisible)
                 Padding(
                   padding: const EdgeInsets.only(top: 20.0),
-                  child: Text(
-                    'Registration successful!',
-                    style: TextStyle(color: Colors.green, fontSize: 16, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
+                  child: Column(
+                    children: [
+                      Text(
+                        'Registration successful!',
+                        style: TextStyle(color: Colors.green, fontSize: 16, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 10),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => LoginScreen()), // Navigate to login
+                          );
+                        },
+                        child: Text(
+                          'Log in to continue',
+                          style: TextStyle(color: Colors.deepPurple, fontSize: 16),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
@@ -201,42 +281,11 @@ class _SignupScreenState extends State<SignupScreen> {
                 Padding(
                   padding: const EdgeInsets.only(top: 20.0),
                   child: Text(
-                    'Please fix the errors before submitting.',
+                    _errorMessage,
                     style: TextStyle(color: Colors.red, fontSize: 14),
                     textAlign: TextAlign.center,
                   ),
                 ),
-
-              // Already have an account? Login option
-              SizedBox(height: 20),
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => LoginScreen()), // Push to LoginScreen
-                  );
-                },
-                child: Center(
-                  child: Text(
-                    "Already have an account? ",
-                    style: TextStyle(color: Colors.black, fontSize: 16),
-                  ),
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => LoginScreen()), // Push to LoginScreen
-                  );
-                },
-                child: Center(
-                  child: Text(
-                    "Login",
-                    style: TextStyle(color: Colors.deepPurple, fontSize: 16),
-                  ),
-                ),
-              ),
             ],
           ),
         ),
